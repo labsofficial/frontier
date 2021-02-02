@@ -25,7 +25,6 @@ use frame_support::{
 };
 use sp_core::{Blake2Hasher, H256};
 use sp_runtime::{
-	Perbill,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
@@ -44,12 +43,14 @@ impl_outer_dispatch! {
 pub struct Test;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -61,25 +62,19 @@ impl frame_system::Trait for Test {
 	type Header = Header;
 	type Event = ();
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type PalletInfo = ();
 	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type Balance = u64;
 	type DustRemoval = ();
@@ -92,7 +87,7 @@ impl pallet_balances::Trait for Test {
 parameter_types! {
 	pub const MinimumPeriod: u64 = 1000;
 }
-impl pallet_timestamp::Trait for Test {
+impl pallet_timestamp::Config for Test {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
@@ -108,9 +103,9 @@ impl FeeCalculator for FixedGasPrice {
 	}
 }
 
-impl Trait for Test {
+impl Config for Test {
 	type FeeCalculator = FixedGasPrice;
-	type GasToWeight = ();
+	type GasWeightMapping = ();
 
 	type CallOrigin = EnsureAddressRoot<Self::AccountId>;
 	type WithdrawOrigin = EnsureAddressNever<Self::AccountId>;
@@ -121,7 +116,7 @@ impl Trait for Test {
 
 	type Event = Event<Test>;
 	type Precompiles = ();
-	type ChainId = SystemChainId;
+	type ChainId = ();
 }
 
 type System = frame_system::Module<Test>;

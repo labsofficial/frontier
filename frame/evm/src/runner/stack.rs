@@ -27,23 +27,26 @@ use fp_evm::{ExecutionInfo, CallInfo, CreateInfo, Account, Log, Vicinity};
 use evm::ExitReason;
 use evm::backend::{Backend as BackendT, ApplyBackend, Apply};
 use evm::executor::StackExecutor;
-use crate::{Trait, AccountStorages, FeeCalculator, AccountCodes, Module, Event, Error, AddressMapping};
+use crate::{
+	Config, AccountStorages, FeeCalculator, AccountCodes, Module, Event,
+	Error, AddressMapping, PrecompileSet,
+};
 use crate::runner::Runner as RunnerT;
-use crate::precompiles::Precompiles;
 
 #[derive(Default)]
-pub struct Runner<T: Trait> {
+pub struct Runner<T: Config> {
 	_marker: PhantomData<T>,
 }
 
-impl<T: Trait> Runner<T> {
+impl<T: Config> Runner<T> {
 	/// Execute an EVM operation.
 	pub fn execute<F, R>(
 		source: H160,
 		value: U256,
-		gas_limit: u32,
+		gas_limit: u64,
 		gas_price: Option<U256>,
 		nonce: Option<U256>,
+		config: &evm::Config,
 		f: F,
 	) -> Result<ExecutionInfo<R>, Error<T>> where
 		F: FnOnce(&mut StackExecutor<Backend<T>>) -> (ExitReason, R),
@@ -65,8 +68,8 @@ impl<T: Trait> Runner<T> {
 		let mut backend = Backend::<T>::new(&vicinity);
 		let mut executor = StackExecutor::new_with_precompile(
 			&backend,
-			gas_limit as usize,
-			T::config(),
+			gas_limit,
+			config,
 			T::Precompiles::execute,
 		);
 
@@ -109,7 +112,7 @@ impl<T: Trait> Runner<T> {
 	}
 }
 
-impl<T: Trait> RunnerT<T> for Runner<T> {
+impl<T: Config> RunnerT<T> for Runner<T> {
 	type Error = Error<T>;
 
 	fn call(
@@ -117,9 +120,10 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 		target: H160,
 		input: Vec<u8>,
 		value: U256,
-		gas_limit: u32,
+		gas_limit: u64,
 		gas_price: Option<U256>,
 		nonce: Option<U256>,
+		config: &evm::Config,
 	) -> Result<CallInfo, Self::Error> {
 		Self::execute(
 			source,
@@ -127,12 +131,13 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 			gas_limit,
 			gas_price,
 			nonce,
+			config,
 			|executor| executor.transact_call(
 				source,
 				target,
 				value,
 				input,
-				gas_limit as usize,
+				gas_limit,
 			),
 		)
 	}
@@ -141,9 +146,10 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 		source: H160,
 		init: Vec<u8>,
 		value: U256,
-		gas_limit: u32,
+		gas_limit: u64,
 		gas_price: Option<U256>,
 		nonce: Option<U256>,
+		config: &evm::Config,
 	) -> Result<CreateInfo, Self::Error> {
 		Self::execute(
 			source,
@@ -151,6 +157,7 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 			gas_limit,
 			gas_price,
 			nonce,
+			config,
 			|executor| {
 				let address = executor.create_address(
 					evm::CreateScheme::Legacy { caller: source },
@@ -159,7 +166,7 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 					source,
 					value,
 					init,
-					gas_limit as usize,
+					gas_limit,
 				), address)
 			},
 		)
@@ -170,9 +177,10 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 		init: Vec<u8>,
 		salt: H256,
 		value: U256,
-		gas_limit: u32,
+		gas_limit: u64,
 		gas_price: Option<U256>,
 		nonce: Option<U256>,
+		config: &evm::Config,
 	) -> Result<CreateInfo, Self::Error> {
 		let code_hash = H256::from_slice(Keccak256::digest(&init).as_slice());
 		Self::execute(
@@ -181,6 +189,7 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 			gas_limit,
 			gas_price,
 			nonce,
+			config,
 			|executor| {
 				let address = executor.create_address(
 					evm::CreateScheme::Create2 { caller: source, code_hash, salt },
@@ -190,7 +199,7 @@ impl<T: Trait> RunnerT<T> for Runner<T> {
 					value,
 					init,
 					salt,
-					gas_limit as usize,
+					gas_limit,
 				), address)
 			},
 		)
@@ -203,7 +212,7 @@ pub struct Backend<'vicinity, T> {
 	_marker: PhantomData<T>,
 }
 
-impl<'vicinity, T: Trait> Backend<'vicinity, T> {
+impl<'vicinity, T: Config> Backend<'vicinity, T> {
 	/// Create a new backend with given vicinity.
 	pub fn new(vicinity: &'vicinity Vicinity) -> Self {
 		Self { vicinity, _marker: PhantomData }
@@ -231,7 +240,7 @@ impl<'vicinity, T: Trait> Backend<'vicinity, T> {
 	}
 }
 
-impl<'vicinity, T: Trait> BackendT for Backend<'vicinity, T> {
+impl<'vicinity, T: Config> BackendT for Backend<'vicinity, T> {
 	fn gas_price(&self) -> U256 { self.vicinity.gas_price }
 	fn origin(&self) -> H160 { self.vicinity.origin }
 
@@ -300,7 +309,7 @@ impl<'vicinity, T: Trait> BackendT for Backend<'vicinity, T> {
 	}
 }
 
-impl<'vicinity, T: Trait> ApplyBackend for Backend<'vicinity, T> {
+impl<'vicinity, T: Config> ApplyBackend for Backend<'vicinity, T> {
 	fn apply<A, I, L>(
 		&mut self,
 		values: A,
