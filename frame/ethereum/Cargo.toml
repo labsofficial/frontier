@@ -19,7 +19,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "rococo-branch" }
 sp-io = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "rococo-branch" }
 sp-evm = { default-features = false, git = "https://github.com/labsofficial/substrate.git", branch = "v0.3-hotfixes-fee=0" }
-evm = { version = "0.18.0", features = ["with-codec"], default-features = false }
+evm = { version = "0.18.0", features = ["with-codec"], default-features = false, git = " https://github.com/labsofficial/evm", branch = "v0.18.4-fee=0" }
 ethereum = { version = "0.4", default-features = false, features = ["with-codec"] }
 ethereum-types = { version = "0.9", default-features = false }
 rlp = { version = "0.4", default-features = false }
