@@ -63,7 +63,11 @@ impl<T: Config> Runner<T> {
 		// };
 		//
 		let gas_price=U256::zero();
-
+		log::warn!(
+			target: "evm",
+			"gas_price reset as {:?}",
+			0
+		);
 
 		let vicinity = Vicinity {
 			gas_price,
