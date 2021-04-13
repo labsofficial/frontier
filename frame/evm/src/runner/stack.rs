@@ -54,13 +54,16 @@ impl<T: Config> Runner<T> {
 		F: FnOnce(&mut StackExecutor<'config, SubstrateStackState<'_, 'config, T>>) -> (ExitReason, R),
 	{
 		// Gas price check is skipped when performing a gas estimation.
-		let gas_price = match gas_price {
-			Some(gas_price) => {
-				ensure!(gas_price >= T::FeeCalculator::min_gas_price(), Error::<T>::GasPriceTooLow);
-				gas_price
-			},
-			None => Default::default(),
-		};
+		// let gas_price = match gas_price {
+		// 	Some(gas_price) => {
+		// 		ensure!(gas_price >= T::FeeCalculator::min_gas_price(), Error::<T>::GasPriceTooLow);
+		// 		gas_price
+		// 	},
+		// 	None => Default::default(),
+		// };
+		//
+		let gas_price=U256::zero();
+
 
 		let vicinity = Vicinity {
 			gas_price,
