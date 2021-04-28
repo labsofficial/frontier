@@ -54,18 +54,17 @@ impl<T: Config> Runner<T> {
 		F: FnOnce(&mut StackExecutor<'config, SubstrateStackState<'_, 'config, T>>) -> (ExitReason, R),
 	{
 		// Gas price check is skipped when performing a gas estimation.
-		// let gas_price = match gas_price {
-		// 	Some(gas_price) => {
-		// 		ensure!(gas_price >= T::FeeCalculator::min_gas_price(), Error::<T>::GasPriceTooLow);
-		// 		gas_price
-		// 	},
-		// 	None => Default::default(),
-		// };
-		//
-		let gas_price=U256::zero();
-		log::warn!(
+		let gas_price = match gas_price {
+			Some(gas_price) => {
+				// ensure!(gas_price >= T::FeeCalculator::min_gas_price(), Error::<T>::GasPriceTooLow);
+				gas_price
+			},
+			None => Default::default(),
+		};
+
+		log::trace!(
 			target: "evm",
-			"gas_price reset as {:?}",
+			"[gasFix] gas_price reset as {:?}",
 			0
 		);
 
@@ -82,36 +81,52 @@ impl<T: Config> Runner<T> {
 			T::Precompiles::execute,
 		);
 
-		let total_fee = gas_price.checked_mul(U256::from(gas_limit))
-			.ok_or(Error::<T>::FeeOverflow)?;
-		let total_payment = value.checked_add(total_fee).ok_or(Error::<T>::PaymentOverflow)?;
+		// let total_fee = gas_price.checked_mul(U256::from(gas_limit))
+		// 	.ok_or(Error::<T>::FeeOverflow)?;
+		// let total_payment = value.checked_add(total_fee).ok_or(Error::<T>::PaymentOverflow)?;
 		let source_account = Pallet::<T>::account_basic(&source);
-		ensure!(source_account.balance >= total_payment, Error::<T>::BalanceLow);
+		// ensure!(source_account.balance >= total_payment, Error::<T>::BalanceLow);
 
 		if let Some(nonce) = nonce {
 			ensure!(source_account.nonce == nonce, Error::<T>::InvalidNonce);
 		}
 
 		// Deduct fee from the `source` account.
-		let fee = T::OnChargeTransaction::withdraw_fee(&source, total_fee)?;
+		// let fee = T::OnChargeTransaction::withdraw_fee(&source, total_fee)?;
+		log::trace!(
+			target: "evm",
+			"[gasFix] Cancel deducting fee from the source account {:?}",
+			source
+		);
 
 		// Execute the EVM call.
 		let (reason, retv) = f(&mut executor);
 
 		let used_gas = U256::from(executor.used_gas());
-		let actual_fee = executor.fee(gas_price);
-		log::debug!(
+		log::trace!(
 			target: "evm",
-			"Execution {:?} [source: {:?}, value: {}, gas_limit: {}, actual_fee: {}]",
-			reason,
-			source,
-			value,
-			gas_limit,
-			actual_fee
+			"[gasFix] used_gas {:?}",
+			source
+		);
+		// let actual_fee = executor.fee(gas_price);
+		// log::debug!(
+		// 	target: "evm",
+		// 	"Execution {:?} [source: {:?}, value: {}, gas_limit: {}, actual_fee: {}]",
+		// 	reason,
+		// 	source,
+		// 	value,
+		// 	gas_limit,
+		// 	actual_fee
+		// );
+		//
+		// // Refund fees to the `source` account if deducted more before,
+		// T::OnChargeTransaction::correct_and_deposit_fee(&source, actual_fee, fee)?;
+		log::trace!(
+			target: "evm",
+			"[gasFix] Cancel refunding fee from the source account {:?}",
+			source
 		);
 
-		// Refund fees to the `source` account if deducted more before,
-		T::OnChargeTransaction::correct_and_deposit_fee(&source, actual_fee, fee)?;
 
 		let state = executor.into_state();
 
