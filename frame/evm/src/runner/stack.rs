@@ -62,7 +62,7 @@ impl<T: Config> Runner<T> {
 			None => Default::default(),
 		};
 
-		log::trace!(
+		log::debug!(
 			target: "evm",
 			"[gasFix] gas_price reset as {:?}",
 			0
@@ -93,7 +93,7 @@ impl<T: Config> Runner<T> {
 
 		// Deduct fee from the `source` account.
 		// let fee = T::OnChargeTransaction::withdraw_fee(&source, total_fee)?;
-		log::trace!(
+		log::debug!(
 			target: "evm",
 			"[gasFix] Cancel deducting fee from the source account {:?}",
 			source
@@ -103,7 +103,7 @@ impl<T: Config> Runner<T> {
 		let (reason, retv) = f(&mut executor);
 
 		let used_gas = U256::from(executor.used_gas());
-		log::trace!(
+		log::debug!(
 			target: "evm",
 			"[gasFix] used_gas {:?}",
 			source
@@ -121,7 +121,7 @@ impl<T: Config> Runner<T> {
 		//
 		// // Refund fees to the `source` account if deducted more before,
 		// T::OnChargeTransaction::correct_and_deposit_fee(&source, actual_fee, fee)?;
-		log::trace!(
+		log::debug!(
 			target: "evm",
 			"[gasFix] Cancel refunding fee from the source account {:?}",
 			source

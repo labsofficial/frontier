@@ -750,9 +750,16 @@ impl<B, C, P, CT, BE, H: ExHashT, A> EthApiT for EthApi<B, C, P, CT, BE, H, A> w
 			Err(e) => return Box::new(future::result(Err(e))),
 		};
 
+        log::debug!(
+            target: "evm",
+            "[gasFix] gas_price requested as {:?}",
+            request.gas_price
+        );
+
 		let message = ethereum::TransactionMessage {
 			nonce,
-			gas_price: request.gas_price.unwrap_or(U256::from(1)),
+			// gas_price: request.gas_price.unwrap_or(U256::from(1)),
+			gas_price: U256::zero(),
 			gas_limit: request.gas.unwrap_or(U256::max_value()),
 			value: request.value.unwrap_or(U256::zero()),
 			input: request.data.map(|s| s.into_vec()).unwrap_or_default(),
@@ -762,6 +769,12 @@ impl<B, C, P, CT, BE, H: ExHashT, A> EthApiT for EthApi<B, C, P, CT, BE, H, A> w
 			},
 			chain_id: chain_id.map(|s| s.as_u64()),
 		};
+
+        log::debug!(
+            target: "evm",
+            "[gasFix] gas_price reset as {:?}",
+            message.gas_price
+        );
 
 		let mut transaction = None;
 
