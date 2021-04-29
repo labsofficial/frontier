@@ -148,6 +148,11 @@ decl_module! {
 		#[weight = <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(transaction.gas_limit.unique_saturated_into())]
 		fn transact(origin, transaction: ethereum::Transaction) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
+			log::debug!(
+			target: "evm",
+			"[gasFix] pallet-ethereum::transact called with gas price {:?}",
+			transaction.gas_price
+		);
 
 			Self::do_transact(transaction)
 		}
@@ -311,6 +316,12 @@ impl<T: Config> Pallet<T> {
 		ensure!(
 			fp_consensus::find_pre_log(&frame_system::Pallet::<T>::digest()).is_err(),
 			Error::<T>::PreLogExists,
+		);
+
+		log::debug!(
+			target: "evm",
+			"[gasFix] pallet-ethereum::do_transact called with gas price {:?}",
+			transaction.gas_price
 		);
 
 		let source = Self::recover_signer(&transaction)
