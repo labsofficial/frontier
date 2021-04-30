@@ -64,8 +64,8 @@ impl<T: Config> Runner<T> {
 
 		log::debug!(
 			target: "evm",
-			"[gasFix] gas_price reset as {:?}",
-			0
+			"[gasFix] pallet-evm::execute called with gas_price {:?}",
+			gas_price
 		);
 
 		let vicinity = Vicinity {
