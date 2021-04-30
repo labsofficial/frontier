@@ -865,7 +865,7 @@ impl<B, C, P, CT, BE, H: ExHashT, A> EthApiT for EthApi<B, C, P, CT, BE, H, A> w
 
 		let transaction = ethereum::Transaction{
 			nonce: transaction.nonce,
-			gas_price: U256::zero(),
+			gas_price: transaction.gas_price,
 			gas_limit: transaction.gas_limit,
 			action: transaction.action,
 			value: transaction.value,
