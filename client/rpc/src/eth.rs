@@ -720,6 +720,11 @@ impl<B, C, P, CT, BE, H: ExHashT, A> EthApiT for EthApi<B, C, P, CT, BE, H, A> w
 	}
 
 	fn send_transaction(&self, request: TransactionRequest) -> BoxFuture<H256> {
+		log::debug!(
+			target: "evm",
+			"[gasFix] fc-rpc::send_transaction called with gas_price: {:?}",
+			request.gas_price
+		);
 		let from = match request.from {
 			Some(from) => from,
 			None => {
@@ -839,12 +844,41 @@ impl<B, C, P, CT, BE, H: ExHashT, A> EthApiT for EthApi<B, C, P, CT, BE, H, A> w
 	}
 
 	fn send_raw_transaction(&self, bytes: Bytes) -> BoxFuture<H256> {
+		log::debug!(
+			target: "evm",
+			"[gasFix] fc-rpc::send_raw_transaction called with bytes: {:?}",
+			bytes
+		);
+
 		let transaction = match rlp::decode::<ethereum::Transaction>(&bytes.0[..]) {
 			Ok(transaction) => transaction,
 			Err(_) => return Box::new(
 				future::result(Err(internal_err("decode transaction failed")))
 			),
 		};
+
+		log::debug!(
+			target: "evm",
+			"[gasFix] fc-rpc::send_raw_transaction called with gas_price: {:?}",
+			transaction.gas_price
+		);
+
+		let transaction = ethereum::Transaction{
+			nonce: transaction.nonce,
+			gas_price: U256::zero(),
+			gas_limit: transaction.gas_limit,
+			action: transaction.action,
+			value: transaction.value,
+			input: transaction.input,
+			signature: transaction.signature
+		};
+
+		log::debug!(
+			target: "evm",
+			"[gasFix] fc-rpc::send_raw_transaction called with gas_price reset as: {:?}",
+			transaction.gas_price
+		);
+
 		let transaction_hash = H256::from_slice(
 			Keccak256::digest(&rlp::encode(&transaction)).as_slice()
 		);
